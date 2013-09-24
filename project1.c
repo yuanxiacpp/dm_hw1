@@ -102,6 +102,26 @@ double* multiply(double *a, double *b, int n, int flag) {
   return result;
 }
 
+void swapColumn(double *a, int n, int i, int j) {
+  int row;
+  for (row = 0; row < n; ++row) {
+    double tmp = a[row*n + i];
+    a[row*n + i] = a[row*n + j];
+    a[row*n + j] = tmp;
+  }
+  return;
+}
+void sortMatrix(double *a, int n) {
+  int i, j;
+  for (i = 0; i < n; ++i) {
+    for (j = i; j < n - 1; ++j) {
+      if (a[j*n + j] > a[(j+1)*n + (j+1)])
+	swapColumn(a, n, j, j+1);
+    }
+  }
+  return;
+}
+
 void jacobi(double *a, int n, double *s, double *u, double *v) {
   double *max = (double*)malloc(sizeof(double));
   int *mi = (int*)malloc(sizeof(int));
