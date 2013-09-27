@@ -13,7 +13,7 @@ void printMatrix(double *a, int n) {
   printf("***************** Matrix %d x %d *********************\n", n, n);
   int i = 0;
   for (i = 0; i < n * n; ++i) {
-    printf("%12.8f ", a[i]);
+    printf("%20.15f ", a[i]);
     if ((i+1) % n == 0)
       printf("\n");
   }
@@ -217,19 +217,23 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     multiply(v, vt, n, UPDATE_FIRST_MATRIX);
     
     printf("Matrix U, V, S\n");
-    printMatrix(u, n);
+    Printmatrix(u, n);
     printMatrix(v, n);
     printMatrix(s, n);
     getchar();
   }
-  printMatrix(u, n);
-  printMatrix(v, n);
-  printMatrix(s, n);
-  //transpose(u, n);
-  //massage(u, s, n);
-  //transpose(v, n);
-  //adjustMatrix(s, u, v, n);
-  //transpose(v, n);
+
+
+  transpose(u, n);
+  massage(u, s, n);
+  transpose(v, n);
+  adjustMatrix(s, u, v, n);
+  transpose(v, n);
+
+
+  // printf("Final U, S, V: \n");
+
+
   return;
   
   
@@ -271,6 +275,6 @@ void problemC(int n) {
 }
 
 int main() {
-  problemC(10);
+  problemC(3);
   return 0;
 }
