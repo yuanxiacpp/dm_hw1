@@ -3,12 +3,10 @@
 #include <math.h>
 #include <string.h>
 
-int LEFT[4] = {1, 2, 3, 4};
-int RIGHT[4] = {4, 3, 2, 1};
 double BAR = 1.0E-13;
 
-int FREE_FIRST_MATRIX = 1;
-int FREE_SECOND_MATRIX = 2;
+int UPDATE_FIRST_MATRIX = 1;
+int UPDATE_SECOND_MATRIX = 2;
 
 
 void printMatrix(double *a, int n) {
@@ -46,44 +44,66 @@ int checkZeros(double *a, int n) {
   int i,j;
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
-      if (a[i*n + j] > BAR)
+      if (i != j && a[i*n + j] > BAR)
 	return 1;
     }
   }
   return 0;
 }
-
-void initializeUV(double *u, double *v, int n, int *mi, int *mj) {
-  int i, j;
-  for (i = 0; i < n; ++i) {
-    for (j = 0; j < n; ++j) {
-      if (i == j) {
-	u[i * n + j] = 1;
-	v[i * n + j] = 1;
-      }
-      else {
-	u[i * n + j] = 0;
-	v[i * n + j] = 0;
-      }
+int sgn(double x) {
+  if (x == 0)
+    return 0;
+  else if (x > 0)
+    return 1;
+  return -1;
+}
+void assignIdentity(double *a, int n) {
+  int r, c;
+  for (r = 0; r < n; ++r) {
+    for (c = 0; c < n; ++c) {
+      if (r == c)
+	a[r*n+c] = 1;
+      else
+	a[r*n+c] = 0;
     }
   }
-  
-  u[i * n + i] = LEFT[0];
-  u[i * n + j] = LEFT[1];
-  u[j * n + i] = LEFT[2];
-  u[j * n + j] = LEFT[3];
+  return;
+}
+void initializeUtVt(double *s, double *u, double *v, int n, int mi, int mj) {
+  assignIdentity(u, n);
+  assignIdentity(v, n);
 
-  v[i * n + i] = RIGHT[0];
-  v[i * n + j] = RIGHT[1];
-  v[j * n + i] = RIGHT[2];
-  v[j * n + j] = RIGHT[3];
+
+  int i = mi;
+  int j = mj;
+  double kk = s[i*n+i];
+  double kl = s[i*n+j];
+  double ll = s[j*n+j];
+  
+
+  double beta = (ll - kk)/(2 * kl);
+  double t = sgn(beta) / (fabs(beta) + sqrt(beta*beta + 1));
+  
+  double cos = 1 / sqrt(t*t+1);
+  double sin = cos * t;
+  printf("cos=%f, sin=%f\n", cos, sin);
+  u[i*n+i] = cos;
+  u[i*n+j] = sin;
+  u[j*n+i] = -sin;
+  u[j*n+j] = cos;
+
+  v[i*n+i] = cos;
+  v[i*n+j] = -sin;
+  v[j*n+i] = sin;
+  v[j*n+j] = cos;
+
   return;
   
 }
 
 //flag determines which input(a or b) to free. T to free a, F to free b. 
 //the return will malloc new mem for either a or b
-double* multiply(double *a, double *b, int n, int flag) {
+void multiply(double *a, double *b, int n, int perseve_flag) {
   int k, i, j;
   double *result = (double*)malloc(n * n * sizeof(double));
   for (i = 0; i < n; ++i) {
@@ -95,11 +115,40 @@ double* multiply(double *a, double *b, int n, int flag) {
       result[i*n + j] = sum;
     }
   }
-  if (flag == 1)
-    free(a);
-  else
-    free(b);
-  return result;
+  if (perseve_flag == 1) {
+    memcpy(a, result, n*n*sizeof(double));
+  }
+  else {
+    memcpy(b, result, n*n*sizeof(double));
+  }
+
+  free(result);
+  return;
+}
+
+void transpose(double *a, int n) {
+  int i, j;
+  for (i = 0; i < n; ++i) {
+    for (j = i + 1; j < n; ++j) {
+      double tmp = a[i*n + j];
+      a[i*n + j] = a[j*n + i];
+      a[j*n + i] = tmp;
+    }
+  }
+  return;
+}
+
+void massage(double *u, double *s, int n) {
+  int i;
+  for (i = 0; i < n; i++) {
+    if (s[i*n+i] < 0) {
+      s[i*n+i] = -s[i*n+i];
+      int j;
+      for (j = 0; j < n; j++)
+	u[j*n+i] = -u[j*n+i];
+    }
+  }
+  return;
 }
 
 void swapColumn(double *a, int n, int i, int j) {
@@ -111,12 +160,24 @@ void swapColumn(double *a, int n, int i, int j) {
   }
   return;
 }
-void sortMatrix(double *a, int n) {
+void swapRow(double *a, int n, int i, int j) {
+  int col;
+  for (col = 0; col < n; ++col) {
+    double tmp = a[i*n + col];
+    a[i*n + col] = a[j*n + col];
+    a[j*n + col] = tmp;
+  }
+  return;
+}
+void adjustMatrix(double *s, double *u, double *v, int n) {
   int i, j;
   for (i = 0; i < n; ++i) {
-    for (j = i; j < n - 1; ++j) {
-      if (a[j*n + j] > a[(j+1)*n + (j+1)])
-	swapColumn(a, n, j, j+1);
+    for (j = 0; j < n - i - 1; ++j) {
+      if (s[j*n + j] > s[(j+1)*n + (j+1)]) {
+	swapColumn(s, n, j, j+1);
+	swapColumn(u, n, j, j+1);
+	swapRow(v, n, j, j+1);
+      }
     }
   }
   return;
@@ -129,7 +190,12 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   *max = 0;
   *mi = 0;
   *mj = 0;
-  memcpy(&s, &a, sizeof(a));
+
+  //intialize U, V, S
+  //memcpy(&u, &a, sizeof(a));
+  assignIdentity(u, n);
+  memcpy(s, a, n*n*sizeof(double));
+  assignIdentity(v, n);
   
   int count = 0;
 
@@ -137,21 +203,38 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     count++;
     printf("Processing %dth round...\n", count);
     findMax(s, n, max, mi, mj);
+    //printf("max=%f, mi=%d, mj=%d\n", *max, *mi, *mj);
     double *ut = (double*)malloc(n*n*sizeof(double));
     double *vt = (double*)malloc(n*n*sizeof(double));
-    initializeUV(ut, vt, n, mi, mj);
+    initializeUtVt(s, ut, vt, n, *mi, *mj);
+    
+    printf("Matrix UT VT S\n");
+    printMatrix(ut, n);
+    printMatrix(vt, n);
+    printMatrix(s, n);
 
-    s = multiply(ut, s, n, FREE_SECOND_MATRIX);
-    s = multiply(s, vt, n, FREE_FIRST_MATRIX);
+    multiply(ut, s, n, UPDATE_SECOND_MATRIX);
+    multiply(s, vt, n, UPDATE_FIRST_MATRIX);
 
-    u = multiply(ut, u, n, FREE_SECOND_MATRIX);
-    v = multiply(v, vt, n, FREE_FIRST_MATRIX);
+    multiply(ut, u, n, UPDATE_SECOND_MATRIX);
+    multiply(v, vt, n, UPDATE_FIRST_MATRIX);
+    
+    printf("Matrix U, S, V\n");
+    printMatrix(u, n);
+    printMatrix(s, n);
+    printMatrix(v, n);
+    getchar();
+    //if (count == 3)
+    //  break;
   }
-
+  //transpose(u, n);
+  //massage(u, s, n);
+  //transpose(v, n);
+  //adjustMatrix(s, u, v, n);
+  //transpose(v, n);
   return;
   
   
-
 }
 
 int main() {
@@ -174,23 +257,25 @@ int main() {
 
 
   //generate test case for c)
-  int len2 = 10;
+  int len2 = 3;
   double *b = (double*)malloc(len2 * len2 * sizeof(double));
   for (i = 0; i < len2; ++i) {
     for (j = 0; j < len2; ++j) {
-      b[i*len2 + j] = i * i + j * j;
+      b[i*len2 + j] = (i+1) * (i+1) + (j+1) * (j+1);
     }
   }
   //for (k = 0; k < 3; ++k) 
   //  printMatrix(a[k], len1[k]);
-  printMatrix(b, len2);
   int n = len2;
+  printMatrix(b, n);
+  //transpose(b, n);
+  //printMatrix(b, n);
   double *s = (double *)malloc(n*n*sizeof(double));
   double *v = (double *)malloc(n*n*sizeof(double));
   double *u = (double *)malloc(n*n*sizeof(double));
   jacobi(b, n, s, u, v);
-  printMatrix(s, n);
-  printMatrix(u, n);
-  printMatrix(v, n);
+  //printMatrix(s, n);
+  //printMatrix(u, n);
+  //printMatrix(v, n);
   return 0;
 }
