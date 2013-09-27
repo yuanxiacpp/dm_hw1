@@ -27,7 +27,7 @@ void findMax(double *a, int n, double *max, int *mi, int *mj) {
   int i, j;
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
-      if (i != j && fabs(a[i*n + j]) >= *max) {
+      if (i != j && fabs(a[i*n + j]) > *max) {
 	*max = fabs(a[i*n + j]);
 	*mi = i;
 	*mj = j;
@@ -72,11 +72,19 @@ void initializeUtVt(double *s, double *u, double *v, int n, int i, int j) {
   assignIdentity(v, n);
 
 
-  double kk = s[i*n+i];
-  double kl = s[i*n+j];
-  double ll = s[j*n+j];
-  
-  printf("kk=%f, kl=%f, ll=%f\n", kk, kl, ll);
+  double kk;
+  double kl;
+  double ll;
+  if (i < j) {
+    kk = s[i*n+i];
+    kl = s[i*n+j];
+    ll = s[j*n+j];
+  }
+  else {
+    kk = s[j*n+j];
+    kl = s[j*n+i];
+    ll = s[i*n+i];
+  }
   double beta = (ll - kk)/(2.0 * kl);
   double t = sgn(beta) / (fabs(beta) + sqrt(beta*beta + 1));
   
@@ -198,10 +206,9 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     double *vt = (double*)malloc(n*n*sizeof(double));
     initializeUtVt(s, ut, vt, n, mi, mj);
     
-    printf("Matrix UT VT\n");
-    printMatrix(ut, n);
-    printMatrix(vt, n);
-    //printMatrix(s, n);
+    //printf("Matrix UT VT\n");
+    //printMatrix(ut, n);
+    //printMatrix(vt, n);
 
     multiply(ut, s, n, UPDATE_SECOND_MATRIX);
     multiply(s, vt, n, UPDATE_FIRST_MATRIX);
@@ -215,6 +222,9 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     printMatrix(s, n);
     getchar();
   }
+  printMatrix(u, n);
+  printMatrix(v, n);
+  printMatrix(s, n);
   //transpose(u, n);
   //massage(u, s, n);
   //transpose(v, n);
@@ -225,45 +235,42 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   
 }
 
-int main() {
-  int i = 0;
-  int j = 0;
-  //generate test case for b)
-  int len1[3] = {10, 20, 40};
-  double **a = (double**)malloc(3 * sizeof(double*));
-  int k = 0;
-  for (k = 0; k < 3; ++k) {
-    int n = len1[k];
-    double *tmp = (double*)malloc(n * n * sizeof(double));
-    for (i = 0; i < n; ++i) {
-      for (j = 0; j < n; ++j) {
-	tmp[i*n + j] = sqrt(i * i + j * j);
-      }
-    }
-    a[k] = tmp;
-  }
+void problemB(int n) {
+  double *a = (double*)malloc(n*n*sizeof(double));
+  int i, j;
+  for (i = 0; i < n; ++i) 
+    for (j = 0; j < n; ++j) 
+      a[i*n+j] = sqrt((i+1)*(i+1) + (j+1)*(j+1));
+  
+  printMatrix(a, n);
 
-
-  //generate test case for c)
-  int len2 = 3;
-  double *b = (double*)malloc(len2 * len2 * sizeof(double));
-  for (i = 0; i < len2; ++i) {
-    for (j = 0; j < len2; ++j) {
-      b[i*len2 + j] = (i+1) * (i+1) + (j+1) * (j+1);
-    }
-  }
-  //for (k = 0; k < 3; ++k) 
-  //  printMatrix(a[k], len1[k]);
-  int n = len2;
-  printMatrix(b, n);
-  //transpose(b, n);
-  //printMatrix(b, n);
   double *s = (double *)malloc(n*n*sizeof(double));
   double *v = (double *)malloc(n*n*sizeof(double));
   double *u = (double *)malloc(n*n*sizeof(double));
-  jacobi(b, n, s, u, v);
-  //printMatrix(s, n);
-  //printMatrix(u, n);
-  //printMatrix(v, n);
+  jacobi(a, n, s, u, v);
+  return;
+  
+}
+
+void problemC(int n) {
+  double *a = (double*)malloc(n*n*sizeof(double));
+  int i, j;
+  for (i = 0; i < n; ++i) {
+    for (j = 0; j < n; ++j) {
+      a[i*n+j] = (i+1)*(i+1) + (j+1)*(j+1);
+    }
+  }
+  printMatrix(a, n);
+
+
+  double *s = (double *)malloc(n*n*sizeof(double));
+  double *v = (double *)malloc(n*n*sizeof(double));
+  double *u = (double *)malloc(n*n*sizeof(double));
+  jacobi(a, n, s, u, v);
+  return;
+}
+
+int main() {
+  problemC(10);
   return 0;
 }
