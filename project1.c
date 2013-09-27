@@ -13,7 +13,7 @@ void printMatrix(double *a, int n) {
   printf("***************** Matrix %d x %d *********************\n", n, n);
   int i = 0;
   for (i = 0; i < n * n; ++i) {
-    printf("%8.3f ", a[i]);
+    printf("%12.8f ", a[i]);
     if ((i+1) % n == 0)
       printf("\n");
   }
@@ -27,9 +27,7 @@ void findMax(double *a, int n, double *max, int *mi, int *mj) {
   int i, j;
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
-      if (i == j)
-	continue;
-      if (fabs(a[i*n + j]) > *max) {
+      if (i != j && fabs(a[i*n + j]) >= *max) {
 	*max = fabs(a[i*n + j]);
 	*mi = i;
 	*mj = j;
@@ -69,33 +67,31 @@ void assignIdentity(double *a, int n) {
   }
   return;
 }
-void initializeUtVt(double *s, double *u, double *v, int n, int mi, int mj) {
+void initializeUtVt(double *s, double *u, double *v, int n, int i, int j) {
   assignIdentity(u, n);
   assignIdentity(v, n);
 
 
-  int i = mi;
-  int j = mj;
   double kk = s[i*n+i];
   double kl = s[i*n+j];
   double ll = s[j*n+j];
   
-
-  double beta = (ll - kk)/(2 * kl);
+  printf("kk=%f, kl=%f, ll=%f\n", kk, kl, ll);
+  double beta = (ll - kk)/(2.0 * kl);
   double t = sgn(beta) / (fabs(beta) + sqrt(beta*beta + 1));
   
-  double cos = 1 / sqrt(t*t+1);
-  double sin = cos * t;
-  printf("cos=%f, sin=%f\n", cos, sin);
-  u[i*n+i] = cos;
-  u[i*n+j] = sin;
-  u[j*n+i] = -sin;
-  u[j*n+j] = cos;
+  double cosa = 1 / sqrt(t*t+1);
+  double sina = cosa * t;
+  printf("cos=%f, sin=%f\n", cosa, sina);
+  u[i*n+i] = cosa;
+  u[i*n+j] = sina;
+  u[j*n+i] = -sina;
+  u[j*n+j] = cosa;
 
-  v[i*n+i] = cos;
-  v[i*n+j] = -sin;
-  v[j*n+i] = sin;
-  v[j*n+j] = cos;
+  v[i*n+i] = cosa;
+  v[i*n+j] = -sina;
+  v[j*n+i] = sina;
+  v[j*n+j] = cosa;
 
   return;
   
@@ -110,9 +106,8 @@ void multiply(double *a, double *b, int n, int perseve_flag) {
     for (j = 0; j < n; ++j) {
       double sum = 0;
       for (k = 0; k < n; ++k) 
-	sum += a[i*n + k] * b[k*n + j];
-      
-      result[i*n + j] = sum;
+	sum += a[i*n+k] * b[k*n+j];
+      result[i*n+j] = sum;
     }
   }
   if (perseve_flag == 1) {
@@ -184,15 +179,7 @@ void adjustMatrix(double *s, double *u, double *v, int n) {
 }
 
 void jacobi(double *a, int n, double *s, double *u, double *v) {
-  double *max = (double*)malloc(sizeof(double));
-  int *mi = (int*)malloc(sizeof(int));
-  int *mj = (int*)malloc(sizeof(int));
-  *max = 0;
-  *mi = 0;
-  *mj = 0;
-
   //intialize U, V, S
-  //memcpy(&u, &a, sizeof(a));
   assignIdentity(u, n);
   memcpy(s, a, n*n*sizeof(double));
   assignIdentity(v, n);
@@ -202,16 +189,19 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   while (checkZeros(s, n) != 0) {
     count++;
     printf("Processing %dth round...\n", count);
-    findMax(s, n, max, mi, mj);
-    //printf("max=%f, mi=%d, mj=%d\n", *max, *mi, *mj);
+    double max = 0;
+    int mi = -1;
+    int mj = -1;
+    findMax(s, n, &max, &mi, &mj);
+    printf("mi=%d, mj=%d\n", mi, mj);
     double *ut = (double*)malloc(n*n*sizeof(double));
     double *vt = (double*)malloc(n*n*sizeof(double));
-    initializeUtVt(s, ut, vt, n, *mi, *mj);
+    initializeUtVt(s, ut, vt, n, mi, mj);
     
-    printf("Matrix UT VT S\n");
+    printf("Matrix UT VT\n");
     printMatrix(ut, n);
     printMatrix(vt, n);
-    printMatrix(s, n);
+    //printMatrix(s, n);
 
     multiply(ut, s, n, UPDATE_SECOND_MATRIX);
     multiply(s, vt, n, UPDATE_FIRST_MATRIX);
@@ -219,13 +209,11 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     multiply(ut, u, n, UPDATE_SECOND_MATRIX);
     multiply(v, vt, n, UPDATE_FIRST_MATRIX);
     
-    printf("Matrix U, S, V\n");
+    printf("Matrix U, V, S\n");
     printMatrix(u, n);
-    printMatrix(s, n);
     printMatrix(v, n);
+    printMatrix(s, n);
     getchar();
-    //if (count == 3)
-    //  break;
   }
   //transpose(u, n);
   //massage(u, s, n);
