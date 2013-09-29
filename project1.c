@@ -172,7 +172,7 @@ void swapRow(double *a, int n, int i, int j) {
   }
   return;
 }
-void adjustMatrix(double *s, double *u, double *v, int n) {
+void sortMatrix(double *s, double *u, double *v, int n) {
   int i, j;
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n - i - 1; ++j) {
@@ -217,7 +217,7 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     multiply(v, vt, n, UPDATE_FIRST_MATRIX);
     
     printf("Matrix U, V, S\n");
-    Printmatrix(u, n);
+    printMatrix(u, n);
     printMatrix(v, n);
     printMatrix(s, n);
     getchar();
@@ -227,12 +227,14 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   transpose(u, n);
   massage(u, s, n);
   transpose(v, n);
-  adjustMatrix(s, u, v, n);
+  sortMatrix(s, u, v, n);
   transpose(v, n);
 
 
-  // printf("Final U, S, V: \n");
-
+  printf("Final U, S, V: \n");
+  printMatrix(u, n);
+  printMatrix(s, n);
+  printMatrix(v, n);
 
   return;
   
