@@ -42,7 +42,9 @@ int checkZeros(double *a, int n) {
   int i,j;
   for (i = 0; i < n; ++i) {
     for (j = 0; j < n; ++j) {
-      if (i != j && a[i*n + j] > BAR)
+      if (i == j)
+	continue;
+      if (fabs(a[i*n + j]) > BAR)
 	return 1;
     }
   }
@@ -75,30 +77,25 @@ void initializeUtVt(double *s, double *u, double *v, int n, int i, int j) {
   double kk;
   double kl;
   double ll;
-  if (i < j) {
-    kk = s[i*n+i];
-    kl = s[i*n+j];
-    ll = s[j*n+j];
-  }
-  else {
-    kk = s[j*n+j];
-    kl = s[j*n+i];
-    ll = s[i*n+i];
-  }
+
+  kk = s[i*n+i];
+  kl = s[i*n+j];
+  ll = s[j*n+j];
+
   double beta = (ll - kk)/(2.0 * kl);
   double t = sgn(beta) / (fabs(beta) + sqrt(beta*beta + 1));
   
   double cosa = 1 / sqrt(t*t+1);
   double sina = cosa * t;
-  printf("cos=%f, sin=%f\n", cosa, sina);
+  //printf("cos=%f, sin=%f\n", cosa, sina);
   u[i*n+i] = cosa;
-  u[i*n+j] = sina;
-  u[j*n+i] = -sina;
+  u[i*n+j] = 0.0 - sina;
+  u[j*n+i] = sina;
   u[j*n+j] = cosa;
 
   v[i*n+i] = cosa;
-  v[i*n+j] = -sina;
-  v[j*n+i] = sina;
+  v[i*n+j] = sina;
+  v[j*n+i] = 0.0 - sina;
   v[j*n+j] = cosa;
 
   return;
@@ -145,10 +142,10 @@ void massage(double *u, double *s, int n) {
   int i;
   for (i = 0; i < n; i++) {
     if (s[i*n+i] < 0) {
-      s[i*n+i] = -s[i*n+i];
+      s[i*n+i] = 0.0 - s[i*n+i];
       int j;
       for (j = 0; j < n; j++)
-	u[j*n+i] = -u[j*n+i];
+	u[j*n+i] = 0.0 - u[j*n+i];
     }
   }
   return;
@@ -174,10 +171,13 @@ void swapRow(double *a, int n, int i, int j) {
 }
 void sortMatrix(double *s, double *u, double *v, int n) {
   int i, j;
-  for (i = 0; i < n; ++i) {
-    for (j = 0; j < n - i - 1; ++j) {
-      if (s[j*n + j] > s[(j+1)*n + (j+1)]) {
-	swapColumn(s, n, j, j+1);
+  for (i = 1; i < n; ++i) {
+    for (j = 0; j < n - i; ++j) {
+      if (s[j*n + j] < s[(j+1)*n + (j+1)]) {
+	double tmp = s[(j+1)*n + (j+1)];
+	s[(j+1)*n + (j+1)] = s[j*n + j];
+	s[j*n + j] = tmp;
+
 	swapColumn(u, n, j, j+1);
 	swapRow(v, n, j, j+1);
       }
@@ -193,17 +193,24 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   assignIdentity(v, n);
   
   int count = 0;
+  
+  double *ut = (double*)malloc(n*n*sizeof(double));
+  double *vt = (double*)malloc(n*n*sizeof(double));
 
   while (checkZeros(s, n) != 0) {
     count++;
-    printf("Processing %dth round...\n", count);
+    //printf("Processing %dth round...\n", count);
     double max = 0;
     int mi = -1;
     int mj = -1;
     findMax(s, n, &max, &mi, &mj);
-    printf("mi=%d, mj=%d\n", mi, mj);
-    double *ut = (double*)malloc(n*n*sizeof(double));
-    double *vt = (double*)malloc(n*n*sizeof(double));
+    //printf("mi=%d, mj=%d\n", mi, mj);
+    if (mi > mj) {
+      int tmp = mi;
+      mi = mj;
+      mj = tmp;
+    }
+
     initializeUtVt(s, ut, vt, n, mi, mj);
     
     //printf("Matrix UT VT\n");
@@ -216,11 +223,11 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
     multiply(ut, u, n, UPDATE_SECOND_MATRIX);
     multiply(v, vt, n, UPDATE_FIRST_MATRIX);
     
-    printf("Matrix U, V, S\n");
-    printMatrix(u, n);
-    printMatrix(v, n);
-    printMatrix(s, n);
-    getchar();
+    //printf("Matrix U, S, V\n");
+    //printMatrix(u, n);
+    //printMatrix(s, n);
+    //printMatrix(v, n);
+    //getchar();
   }
 
 
@@ -231,10 +238,33 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   transpose(v, n);
 
 
-  printf("Final U, S, V: \n");
+  printf("Original Matrix A\n");
+  printMatrix(a, n);
+  printf("\nFinal U, S, V: \n");
   printMatrix(u, n);
   printMatrix(s, n);
   printMatrix(v, n);
+  printf("%d rounds calculation completed.\n", count);
+
+
+  
+  /*
+  getchar();
+  printf("Double Check\n");
+  double *uu = (double*)malloc(n*n*sizeof(double));
+  double *vv = (double*)malloc(n*n*sizeof(double));
+
+  memcpy(uu, u, n*n*sizeof(double));
+  memcpy(vv, v, n*n*sizeof(double));
+
+  transpose(uu, n);
+  transpose(vv, n);
+
+  multiply(u, uu, n, UPDATE_SECOND_MATRIX);
+  multiply(v, vv, n, UPDATE_SECOND_MATRIX);
+  printMatrix(uu, n);
+  printMatrix(vv, n);
+  */
 
   return;
   
@@ -248,7 +278,7 @@ void problemB(int n) {
     for (j = 0; j < n; ++j) 
       a[i*n+j] = sqrt((i+1)*(i+1) + (j+1)*(j+1));
   
-  printMatrix(a, n);
+  //printMatrix(a, n);
 
   double *s = (double *)malloc(n*n*sizeof(double));
   double *v = (double *)malloc(n*n*sizeof(double));
@@ -277,6 +307,9 @@ void problemC(int n) {
 }
 
 int main() {
-  problemC(3);
+  //problemB(10);
+  //problemB(20);
+  //problemB(40);
+  problemC(10);
   return 0;
 }
