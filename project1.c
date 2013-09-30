@@ -259,13 +259,14 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   transpose(v, n);
 
 
-  printf("\nOriginal Matrix\n");
-  printMatrix(a, n);
-  printf("\nFinal U, S, V: \n");
-  printMatrix(u, n);
-  printMatrix(s, n);
-  printMatrix(v, n);
-  printf("%d rounds calculation completed.\n", count);
+  //printf("\nOriginal Matrix\n");
+  //printMatrix(a, n);
+  //printf("\nFinal U, S, V: \n");
+  //printMatrix(u, n);
+  //printMatrix(s, n);
+  //printMatrix(v, n);
+  //printf("%d rounds calculation completed.\n", count);
+  //printf("%d\n", count);
 
   /*int x, y;
   printf("{");
@@ -353,9 +354,13 @@ void cornerCase() {
 int main() {
   //problemB(10);
   //problemB(20);
-  problemB(40);
-  //problemC(10);
-  //problemC(20);
-  //problemC(40);
+  //problemB(40);
+  problemC(10);
+  problemC(15);
+  problemC(20);
+  problemC(25);
+  problemC(30);
+  problemC(35);
+  problemC(40);
   return 0;
 }
