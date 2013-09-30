@@ -22,7 +22,6 @@ void printMatrix(double *a, int n) {
 }
 
 
-
 void findMax(double *a, int n, double *max, int *mi, int *mj) {
   int i, j;
   for (i = 0; i < n; ++i) {
@@ -73,7 +72,31 @@ void initializeUtVt(double *s, double *u, double *v, int n, int i, int j) {
   assignIdentity(u, n);
   assignIdentity(v, n);
 
+  double ii = s[i*n+i];
+  double ij = s[i*n+j];
+  double ji = s[j*n+i];
+  double jj = s[j*n+j];
 
+  double x = atan((ij+ji)/(jj-ii));
+  double y = atan((ij-ji)/(jj+ii));
+
+  double alpha = (x+y)/2.0;
+  double beta = (x-y)/2.0;
+
+  u[i*n+i] = cos(alpha);
+  u[i*n+j] = 0.0 - sin(alpha);
+  u[j*n+i] = 0.0 - u[i*n+j];
+  u[j*n+j] = u[i*n+i];
+
+  v[i*n+i] = cos(beta);
+  v[i*n+j] = sin(beta);
+  v[j*n+i] = 0.0 - v[i*n+j];
+  v[j*n+j] = v[i*n+i];
+
+
+  /*
+
+  //jacobi rotation: http://en.wikipedia.org/wiki/Jacobi_rotation
   double kk;
   double kl;
   double ll;
@@ -97,13 +120,12 @@ void initializeUtVt(double *s, double *u, double *v, int n, int i, int j) {
   v[i*n+j] = sina;
   v[j*n+i] = 0.0 - sina;
   v[j*n+j] = cosa;
-
+  */
   return;
   
 }
 
-//flag determines which input(a or b) to free. T to free a, F to free b. 
-//the return will malloc new mem for either a or b
+//flag determines which matrix to store the result
 void multiply(double *a, double *b, int n, int perseve_flag) {
   int k, i, j;
   double *result = (double*)malloc(n * n * sizeof(double));
@@ -177,7 +199,6 @@ void sortMatrix(double *s, double *u, double *v, int n) {
 	double tmp = s[(j+1)*n + (j+1)];
 	s[(j+1)*n + (j+1)] = s[j*n + j];
 	s[j*n + j] = tmp;
-
 	swapColumn(u, n, j, j+1);
 	swapRow(v, n, j, j+1);
       }
@@ -238,7 +259,7 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   transpose(v, n);
 
 
-  printf("Original Matrix A\n");
+  printf("\nOriginal Matrix\n");
   printMatrix(a, n);
   printf("\nFinal U, S, V: \n");
   printMatrix(u, n);
@@ -246,9 +267,21 @@ void jacobi(double *a, int n, double *s, double *u, double *v) {
   printMatrix(v, n);
   printf("%d rounds calculation completed.\n", count);
 
-
+  /*int x, y;
+  printf("{");
+  for (x = 0; x < n; x++) {
+    printf("{");
+    for (y = 0; y < n; y++) {
+      printf("%4.3f", a[x*n+y]);
+      if (y != n - 1)
+	printf(", ");
+    }
+    printf("},");
+  }
+  printf("}\n");
+  printf("\n\n");
   
-  /*
+  
   getchar();
   printf("Double Check\n");
   double *uu = (double*)malloc(n*n*sizeof(double));
@@ -277,7 +310,7 @@ void problemB(int n) {
   for (i = 0; i < n; ++i) 
     for (j = 0; j < n; ++j) 
       a[i*n+j] = sqrt((i+1)*(i+1) + (j+1)*(j+1));
-  
+
   //printMatrix(a, n);
 
   double *s = (double *)malloc(n*n*sizeof(double));
@@ -296,8 +329,8 @@ void problemC(int n) {
       a[i*n+j] = (i+1)*(i+1) + (j+1)*(j+1);
     }
   }
-  printMatrix(a, n);
 
+  //printMatrix(a, n);
 
   double *s = (double *)malloc(n*n*sizeof(double));
   double *v = (double *)malloc(n*n*sizeof(double));
@@ -306,10 +339,23 @@ void problemC(int n) {
   return;
 }
 
+void cornerCase() {
+  double a[4] = {1, -2, 2, 1};
+  printMatrix(a, 2);
+  
+  double s[4];
+  double v[4];
+  double u[4];
+  jacobi(a, 2, s, u, v);
+  return;
+}
+
 int main() {
   //problemB(10);
   //problemB(20);
-  //problemB(40);
-  problemC(10);
+  problemB(40);
+  //problemC(10);
+  //problemC(20);
+  //problemC(40);
   return 0;
 }
